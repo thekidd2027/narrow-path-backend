@@ -51,6 +51,30 @@ const TABLES = {
   details2025:   "dZK8ZXglZbli9B",
 };
 
+// Softr WRITE endpoints require field IDs (not names), so we translate
+// friendly field names -> field IDs for create/update. (Reads use fieldNames=true.)
+const FIELD_IDS = {
+  settings:     { Key:"dr65G", Value:"9k6n4", Category:"JkJvY" },
+  campers:      { Name:"Za5jb", Grade:"jili8", Session:"Ofowv", Gender:"PMLto" },
+  volunteers:   { Name:"xAawS", Role:"4qtJf" },
+  games:        { Name:"PpZZK", Note:"dLxrP", "Default Coaches":"9ttNj" },
+  conditioning: { Name:"p0jBw" },
+  skills:       { Name:"4aDjc", Summary:"9ukcy", "Coaching Note":"joWXU", Drills:"8DWgY", Games:"xTNco" },
+  teams:        { Team:"tMUbI", Day:"GHWYt", Session:"uQC1Y", Court:"92tk9", Coaches:"Us3R1", Players:"pXABe" },
+  years:        { Year:"iAkvI", Status:"9uItG", Notes:"LARja" },
+};
+
+// Convert a fields object keyed by NAME into one keyed by field ID for a table.
+function toFieldIds(tableName, fields) {
+  const map = FIELD_IDS[tableName];
+  if (!map || !fields) return fields || {};
+  const out = {};
+  for (const [k, v] of Object.entries(fields)) {
+    out[map[k] || k] = v;   // translate known names; pass through anything already an ID
+  }
+  return out;
+}
+
 function tableId(name) {
   const id = TABLES[name];
   if (!id) throw { status: 404, message: `Unknown table: ${name}` };
@@ -98,9 +122,10 @@ app.get("/api/table/:name", async (req, res) => {
 app.post("/api/table/:name", async (req, res) => {
   try {
     const tid = tableId(req.params.name);
+    const fields = toFieldIds(req.params.name, req.body.fields || {});
     const r = await softr(
-      `/databases/${DATABASE_ID}/tables/${tid}/records?fieldNames=true`,
-      { method: "POST", body: JSON.stringify({ fields: req.body.fields || {} }) }
+      `/databases/${DATABASE_ID}/tables/${tid}/records`,
+      { method: "POST", body: JSON.stringify({ fields }) }
     );
     res.json(r);
   } catch (e) {
@@ -112,9 +137,10 @@ app.post("/api/table/:name", async (req, res) => {
 app.patch("/api/table/:name/:recordId", async (req, res) => {
   try {
     const tid = tableId(req.params.name);
+    const fields = toFieldIds(req.params.name, req.body.fields || {});
     const r = await softr(
-      `/databases/${DATABASE_ID}/tables/${tid}/records/${req.params.recordId}?fieldNames=true`,
-      { method: "PATCH", body: JSON.stringify({ fields: req.body.fields || {} }) }
+      `/databases/${DATABASE_ID}/tables/${tid}/records/${req.params.recordId}`,
+      { method: "PATCH", body: JSON.stringify({ fields }) }
     );
     res.json(r);
   } catch (e) {
